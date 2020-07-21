@@ -40,9 +40,8 @@ cur = conn.cursor()
 
 # CREATION TABLES
 cur.execute("SELECT to_regclass('prefecture');")
-isTableExists = cur.fetchone()[0] == None
 
-if isTableExists :
+if cur.fetchone()[0] == None :
     cur.execute('''CREATE TABLE prefecture (insee_code INTEGER PRIMARY KEY, postal_code TEXT,
     city TEXT, department TEXT, region TEXT, statut TEXT, average_altitude FLOAT, area_size FLOAT,
     population FLOAT, geo_lat FLOAT, geo_long FLOAT, city_code INTEGER, canton_code INTEGER,
@@ -52,9 +51,8 @@ else :
     print("La table 'prefecture' existe déjà")
 
 cur.execute("SELECT to_regclass('journey');")
-isTableExists = cur.fetchone()[0] == None
 
-if isTableExists :
+if cur.fetchone()[0] == None :
     cur.execute('''CREATE TABLE journey (insee_code_from INTEGER, isee_code_to INTEGER, co2 FLOAT, duration INTEGER);''')
     print("Création de la table journey effectuée.")
 else :
@@ -94,6 +92,7 @@ with open(CITY_REFERENTIAL_OUT_PATH, mode="r", encoding="utf-8") as file :
                    row["Code Région"]
                 ]
 
+#todo : on conflict do update
         cur.execute("""INSERT 
                         INTO prefecture (insee_code, 
                                         postal_code, 
@@ -112,7 +111,7 @@ with open(CITY_REFERENTIAL_OUT_PATH, mode="r", encoding="utf-8") as file :
                                         departement_code, 
                                         area_code) 
                         VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT DO NOTHING
+                        ON CONFLICT DO NOTHING 
                         ;""", values)
 
     conn.commit()
