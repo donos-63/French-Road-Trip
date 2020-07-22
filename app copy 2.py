@@ -7,106 +7,16 @@ import requests
 import json
 from collections import Counter 
 from itertools import chain 
+from DatabaseAccess.Connector import Connector
+import DatabaseAccess.sql_requests as sql
 
-
-# [
-# "3.61132640921;45.9381159052",
-# "5.30407617795;44.7264116116",
-# "3.9261116009;45.655161946",
-# "4.8419319446;45.8220411914",
-# "0.376581458211;48.4602912292",
-# "6.98580589371;47.7919119213",
-# "1.40684415026;49.3574004646",
-# "6.78443520767;48.6300704003",
-# "0.88757317848;47.7861085409",
-# "2.94370342447;47.4543629223",
-# "1.51011696561;48.5606379303",
-# "3.93440126624;48.9038402772",
-# "0.201372876533;43.281097408"
-# ]
-
-all_waypoints = ["16015",
-"15014",
-"24322",
-"93008",
-"38185",
-"26362",
-"95500",
-"37261",
-"01053",
-"32013",
-"12202",
-"22278",
-"40192",
-"53130",
-"72181",
-"19272",
-"05061",
-"82121",
-"28085",
-"60057"
-# "85191",
-# "84007",
-# "27229",
-# "30189",
-# "66136",
-# "91228",
-# "43157",
-# "07186",
-# "74010",
-# "36044",
-# "64445",
-# "75101",
-# "88160",
-# "55029",
-# "06088",
-# "52121",
-# "08105",
-# "79191",
-# "56260",
-# "54395",
-# "50502",
-# "10387",
-# "68066",
-# "23096",
-# "29232",
-# "90010",
-# "78646",
-# "11069",
-# "39300",
-# "42218",
-# "70550",
-# "46042",
-# "49007",
-# "58194",
-# "02408",
-# "65440",
-# "47001",
-# "81004",
-# "41018",
-# "94028",
-# "77288",
-# "48095",
-# "73065",
-# "03190",
-# "18033",
-# "62041",
-# "17300",
-# "89024",
-# "92050",
-# "71270",
-# "83137",
-# "61001",
-# "09122",
-# "04070"
-]
+all_waypoints = []
+db_connector = Connector()
 
 API_NAVITIA = "https://api.sncf.com/v1/coverage/sncf/journeys?key=6cf28a3a-59c3-4c82-8cbf-8fa5e64b01da&from=admin:fr:{0}&to=admin:fr:{1}&datetime={2}&min_nb_journeys=10"
 DURATION_SEARCH = "DURATION_SEARCH"
 CO2_SEARCH = "CO2_SEARCH"
 travel_results = []
-
-#gmaps = googlemaps.Client(key="AIzaSyDV675gkBNyn314zSeMTT0cMGxE9ju14B0")
 
 def compute_fitness(solution, search_type):
     """
@@ -230,7 +140,9 @@ def run_genetic_algorithm(generations=50, population_size=10):
                                                                        population_fitness[agent_genome],
                                                                        len(population_fitness)))
                 print(agent_genome)
-                travel_results.append(list(tuple(agent_genome)))
+                u = []
+                u.append(agent_genome)
+                travel_results.append(u)
                 print("")
 
             # Create 1 exact copy of each of the top road trips
@@ -250,65 +162,59 @@ def run_genetic_algorithm(generations=50, population_size=10):
 
         population = new_population
 
-
 waypoint_co2 = {}
 waypoint_durations = {}
 
-for (waypoint1, waypoint2) in combinations(all_waypoints, 2):
-    try:
+saved_waypoints = db_connector.execute_query('SELECT count(*) FROM journey')
 
-        route = requests.get(API_NAVITIA.format(waypoint1, waypoint2, "20200730T152506"))
+if not len(saved_waypoints.fetchall()) == 0:
+    print("le référentiel des voyage existe déjà")
+else :
+    results = db_connector.execute_query(sql.SQL_GET_ALL_PREFECTURE)
+    all_waypoints = results.fetchall()
 
-        """ route = gmaps.distance_matrix(origins=[waypoint1],
-                                      destinations=[waypoint2],
-                                      mode="driving", # Change this to "walking" for walking directions,
-                                                      # "bicycling" for biking directions, etc.
-                                      language="English",
-                                      units="metric")
-        """
+    for (waypoint1, waypoint2) in combinations(all_waypoints, 2):
+        try:
+            from_city = waypoint1[0]
+            to_city = waypoint2[0]
+            route = requests.get(API_NAVITIA.format(from_city, to_city, "20200730T152506"))
+            response = json.loads(route.text)
 
-        response = json.loads(route.text)
+            mid_duration = 0
+            mid_co2 = 0
+            for journey in response["journeys"]:
+                mid_duration += journey["duration"]
+                mid_co2 += journey["co2_emission"]["value"]
 
-        mid_duration = 0
-        mid_co2 = 0
-        for journey in response["journeys"]:
-            mid_duration += journey["duration"]
-            mid_co2 += journey["co2_emission"]["value"]
+            waypoint_co2[frozenset([from_city, to_city])] = mid_co2/len(response["journeys"])
+            waypoint_durations[frozenset([from_city, to_city])] = mid_duration/len(response["journeys"])
+        
+        except Exception as e:
+            print("Error with finding the route between %s and %s." % (from_city, to_city))
 
-        waypoint_co2[frozenset([waypoint1, waypoint2])] = mid_co2/len(response["journeys"])
-        waypoint_durations[frozenset([waypoint1, waypoint2])] = mid_duration/len(response["journeys"])
-    
-    except Exception as e:
-        print("Error with finding the route between %s and %s." % (waypoint1, waypoint2))
-
-with open("my-waypoints-dist-dur.tsv", "w") as out_file:
-    out_file.write("\t".join(["waypoint1",
-                              "waypoint2",
-                              "co2_gEC",
-                              "duration_s"]))
-    
+    #Enregistrement des trajets point à point
     for (waypoint1, waypoint2) in waypoint_co2.keys():
-        out_file.write("\n" +
-                       "\t".join([waypoint1,
-                                  waypoint2,
-                                  str(waypoint_co2[frozenset([waypoint1, waypoint2])]),
-                                  str(waypoint_durations[frozenset([waypoint1, waypoint2])])]))
+        waypoint = [waypoint1,
+                    waypoint2,
+                    str(waypoint_co2[frozenset([waypoint1, waypoint2])]),
+                    str(int(waypoint_durations[frozenset([waypoint1, waypoint2])]))]
+        db_connector.execute_nonquery(sql.SQL_INSERT_WAYPOINT, waypoint)
+    
+    #commit voyage dans la bdd
+    db_connector.commit()
 
 waypoint_co2 = {}
 waypoint_durations = {}
 all_waypoints = set()
 
-waypoint_data = pd.read_csv("my-waypoints-dist-dur.tsv", sep="\t")
+waypoints = db_connector.execute_query(sql.SQL_GET_WAYPOINTS)
 
-for i, row in waypoint_data.iterrows():
-    waypoint_co2[frozenset([int(row.waypoint1), int(row.waypoint2)])] = row.co2_gEC
-    waypoint_durations[frozenset([int(row.waypoint1), int(row.waypoint2)])] = row.duration_s
-    all_waypoints.update([row.waypoint1, row.waypoint2])
+for row in waypoints:
+    waypoint_co2[frozenset([int(row[0]), int(row[1])])] = row[2]
+    waypoint_durations[frozenset([int(row[0]), int(row[1])])] = row[3]
+    all_waypoints.update([row[0], row[1]])
 
 run_genetic_algorithm()
 
-(unique, counts) = np.unique(travel_results, return_counts=True)
-Alist = [[('Mon', 'Wed')], [('Mon')], [('Tue')],[('Mon', 'Wed')] ]
-v = Counter(chain(*Alist))
-print(unique)
+v = Counter(chain(*travel_results))
 print(v)
