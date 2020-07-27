@@ -18,11 +18,19 @@ SQL_CREATE_TABLE_PREFECTURE = """
                             """
 
 SQL_CREATE_TABLE_JOURNEY = """
-                            CREATE TABLE journey (insee_code_from INTEGER, 
-                                                  insee_code_to INTEGER, 
+                            CREATE TABLE journey (insee_code_from TEXT, 
+                                                  insee_code_to TEXT, 
                                                   co2 FLOAT, 
                                                   duration INTEGER)
                             """
+
+                                                  
+SQL_CREATE_TABLE_SUBSTITUTE = """
+                            CREATE TABLE substitute (insee_code_from TEXT, 
+                                                  insee_code_to TEXT,
+                                                  distance INTEGER)
+                            """
+                            
 #todo : on conflict do update
 SQL_INSERT_PREFECTURE = """
                         INSERT 
@@ -63,6 +71,10 @@ SQL_GET_WAYPOINTS = """
                     """
 
 SQL_GET_ALL_PREFECTURE = """
-                            SELECT insee_code 
+                            SELECT insee_code, postal_code, city 
                             FROM prefecture
+                        """
+
+SQL_INSERT_CITY_WITHOUT_STATION = """
+                            INSERT INTO substitute VALUES (%s, %s, %s)
                         """

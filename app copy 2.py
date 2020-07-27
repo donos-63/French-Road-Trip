@@ -9,14 +9,23 @@ from collections import Counter
 from itertools import chain 
 from DatabaseAccess.Connector import Connector
 import DatabaseAccess.sql_requests as sql
+from datetime import datetime
 
 all_waypoints = []
 db_connector = Connector()
 
-API_NAVITIA = "https://api.sncf.com/v1/coverage/sncf/journeys?key=6cf28a3a-59c3-4c82-8cbf-8fa5e64b01da&from=admin:fr:{0}&to=admin:fr:{1}&datetime={2}&min_nb_journeys=10"
+#API_KEY = '6cf28a3a-59c3-4c82-8cbf-8fa5e64b01da'
+API_KEY = '3fd6041b-beda-4a79-9f1a-09bc263a1dfd'
+
+API_NAVITIA = "https://api.sncf.com/v1/coverage/sncf/journeys?key={3}&from=admin:fr:{0}&to=admin:fr:{1}&datetime={2}&min_nb_journeys=10"
 DURATION_SEARCH = "DURATION_SEARCH"
 CO2_SEARCH = "CO2_SEARCH"
 travel_results = []
+start_date = "20200730T152506"
+
+def datetime_str_to_datetime_str(datetime_str, fromFormat, toFormat):
+    date_time = datetime.strptime(datetime_str, fromFormat)
+    return date_time.strftime(toFormat)  
 
 def compute_fitness(solution, search_type):
     """
@@ -167,7 +176,9 @@ waypoint_durations = {}
 
 saved_waypoints = db_connector.execute_query('SELECT count(*) FROM journey')
 
-if not len(saved_waypoints.fetchall()) == 0:
+saved_waypoints.fetchall()
+# if not len(saved_waypoints.fetchall()) == 0:
+if True == False:
     print("le référentiel des voyage existe déjà")
 else :
     results = db_connector.execute_query(sql.SQL_GET_ALL_PREFECTURE)
@@ -177,7 +188,7 @@ else :
         try:
             from_city = waypoint1[0]
             to_city = waypoint2[0]
-            route = requests.get(API_NAVITIA.format(from_city, to_city, "20200730T152506"))
+            route = requests.get(API_NAVITIA.format(from_city, to_city, "20200730T152506", API_KEY))
             response = json.loads(route.text)
 
             mid_duration = 0
@@ -191,6 +202,7 @@ else :
         
         except Exception as e:
             print("Error with finding the route between %s and %s." % (from_city, to_city))
+            db_connector.execute_query(sql.SQL_INSERT_CITY_WITHOUT_STATION, [from_city, to_city, 0 ])
 
     #Enregistrement des trajets point à point
     for (waypoint1, waypoint2) in waypoint_co2.keys():
@@ -216,5 +228,37 @@ for row in waypoints:
 
 run_genetic_algorithm()
 
-v = Counter(chain(*travel_results))
-print(v)
+#take most represented travel
+journey_groups = Counter(chain(*travel_results))
+top_journeys = journey_groups.most_common(1)[0][0]
+
+print(top_journeys)
+
+#calcul des horaires de voyage réels pour le trajet le plus optimisé 
+travels = []
+trip_date = start_date
+top_journeys = top_journeys
+travel_date = datetime.now().strftime("%Y%m%dT%H%M%S")
+print('Départ du calcul du voyage à %s' % (datetime_str_to_datetime_str(travel_date,"%Y%m%dT%H%M%S", "%H:%M:%S-%d/%Y/%m")))
+
+for i in range(len(top_journeys)-1):
+#for journey in top_journeys:
+    from_city = top_journeys[i]
+    to_city = top_journeys[i+1]
+    route = requests.get(API_NAVITIA.format( from_city, to_city, travel_date, API_KEY))
+    best_travel = json.loads(route.text)[0]
+
+    print('Voyage de %s à %s. Départ à %s ' % ( from_city, to_city, datetime_str_to_datetime_str(best_travel['departure_date_time'], "%Y%m%dT%H%M%S", "%H:%M:%S-%d/%Y/%m")) )
+    print('Arrivé à %s après %s transferts' % ( datetime_str_to_datetime_str(best_travel['arrival_date_time'], "%Y%m%dT%H%M%S", "%H:%M:%S-%d/%Y/%m"), best_travel['nb_transfers']))
+
+    for section in best_travel['sections']:
+        if 'from' in section:
+            if not section['type'] == 'crow_fly':
+                if not 'transfer_type' in section or not section['transfer_type'] == 'walking': #vilaine faute d'orthographe sur transfer_type
+                    print('       -> %s - %s (%s)' % (section['from']['name'], section['to']['name'], section['display_informations']['physical_mode']))
+            #else : initiale section, not used
+        else:
+            print('       -> Waiting %s minutes' % (section['duration']/60))
+
+    travel_date = best_travel['arrival_date_time']
+        

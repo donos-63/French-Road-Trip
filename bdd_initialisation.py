@@ -45,6 +45,16 @@ if result.fetchone()[0] == None :
 else :
     print("La table 'journey' existe déjà")
 
+# CREATION TABLES
+result = db_connector.execute_query("SELECT to_regclass('substitute');")
+
+if result.fetchone()[0] == None :
+    db_connector.execute_nonquery(requests.SQL_CREATE_TABLE_SUBSTITUTE)
+    print("Création de la table substitute effectuée.")
+else :
+    print("La table 'substitute' existe déjà")
+
+
 # # ## SAUVEGARDE DE LA BDD
 #pas besoin sur un create
 db_connector.commit()
