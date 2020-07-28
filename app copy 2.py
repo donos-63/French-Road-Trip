@@ -16,7 +16,12 @@ all_waypoints = None
 db_connector = Connector()
 
 #API_KEY = '6cf28a3a-59c3-4c82-8cbf-8fa5e64b01da'
-API_KEY = '3fd6041b-beda-4a79-9f1a-09bc263a1dfd'
+#API_KEY = '3fd6041b-beda-4a79-9f1a-09bc263a1dfd'
+#API_KEY = 'd3f69ecb-68f5-477e-b1bb-d58208f936c5'
+#API_KEY = '78cc6f8e-68d6-450d-89d0-8a085b6c5af5'
+##API_KEY = 'b84ebebd-476c-4204-b195-7ffeb67043e7'
+#API_KEY = 'cc3bc7b1-4c27-4176-aefd-15017c363178'
+API_KEY = '57f195e9-78a9-4fd7-a10c-312f0502d659'
 
 API_NAVITIA = "https://api.sncf.com/v1/coverage/sncf/journeys?key={3}&from=admin:fr:{0}&to=admin:fr:{1}&datetime={2}&min_nb_journeys=10"
 DURATION_SEARCH = "DURATION_SEARCH"
@@ -191,8 +196,12 @@ saved_waypoints.fetchall()
 if True == False:
     print("le référentiel des voyage existe déjà")
 else :
+    k = 0 #todo : à supprimer
     for (from_city, to_city) in combinations(all_waypoints[0].values, 2):
         try:
+            k = k + 1
+            print(k)
+
             if int(from_city) in bad_waypoints or int(to_city) in bad_waypoints:
                 continue
 
@@ -211,18 +220,17 @@ else :
         except Exception as e:
             print("Error with finding the route between %s and %s : %s" % (from_city, to_city, response["error"]["message"]))
             if 'no destination point' == response["error"]["message"]:
-                db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, [to_city])
+         #       db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, [to_city])
                 bad_waypoints.append(int(to_city))
             
             if 'no origin point' == response["error"]["message"]:
-                db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, [from_city])
+         #       db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, [from_city])
                 bad_waypoints.append(int(from_city))
             
             for bad_insee_code in re.findall('The entry point: admin:fr:([0-9]+) is not valid', response["error"]["message"]):
                 if not int(bad_insee_code) in bad_waypoints:
-                    db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, [bad_insee_code])
+         #           db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, [bad_insee_code])
                     bad_waypoints.append(int(bad_insee_code))
-
 
     #Enregistrement des trajets point à point
     for (waypoint1, waypoint2) in waypoint_co2.keys():
@@ -233,6 +241,12 @@ else :
         db_connector.execute_nonquery(sql.SQL_INSERT_WAYPOINT, waypoint)
     
     #commit voyage dans la bdd
+    db_connector.commit()
+
+    #enregistrement des préfectures non référencées (pas de gare)
+    print(bad_waypoints)
+    for bad_city in bad_waypoints:
+        db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, bad_city)
     db_connector.commit()
 
 def store_section(description, geo_point_from, geo_point_to, section_type, duration = None, co2 = None):

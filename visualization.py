@@ -1,66 +1,63 @@
 from DatabaseAccess.Connector import Connector
 import DatabaseAccess.sql_requests as sql
-import pandas as pd
-import geopandas as gpd
+import matplotlib
 import matplotlib.pyplot as plt
-import plotly.graph_objects as go
+from mpl_toolkits.basemap import Basemap
+import matplotlib.colors as colors
+import numpy as np
 
-pd.set_option("max.columns", 30)
-
-print("Available Pandas Datasets", gpd.datasets.available)
+plt.rcParams['figure.figsize'] = [20, 20]
+np.set_printoptions(suppress=True)
 
 db_connector = Connector()
 
 results = db_connector.execute_query(sql.SQL_GET_FRENCH_TRIP)
 waypoints = results.fetchall()
-fig = go.Figure()
-
-all_waypoints = pd.DataFrame(results.fetchall())
-
-source_to_dest = zip(all_waypoints[0].values,all_waypoints[2].values,
-                     all_waypoints[1].values, all_waypoints[3].values,
-                     all_waypoints[4])
 
 
-## Loop thorugh each flight entry to add line between source and destination
-for slat,dlat, slon, dlon, description in source_to_dest:
-    fig.add_trace(go.Scattergeo(
-                        lat = [slat,dlat],
-                        lon = [slon, dlon],
-                        mode = 'lines',
-                        line = description
-                        ))
+lat = []
+long = []
+for trip in waypoints:
+        long.append(float(trip[0]))
+        lat.append(float(trip[1]))        
+        long.append(float(trip[2]))
+        lat.append(float(trip[3]))        
 
-## Logic to create labels of source and destination cities of flights
-cities = brazil_cnt_df["Cidade.Origem"].values.tolist()+brazil_cnt_df["Cidade.Destino"].values.tolist()
-countries = brazil_cnt_df["Pais.Origem"].values.tolist()+brazil_cnt_df["Pais.Destino"].values.tolist()
-scatter_hover_data = [country + " : "+ city for city, country in zip(cities, countries)]
+def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
+    new_cmap = colors.LinearSegmentedColormap.from_list(
+        'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=minval, b=maxval),
+        cmap(np.linspace(minval, maxval, n)))
+    return new_cmap
 
-## Loop thorugh each flight entry to plot source and destination as points.
-fig.add_trace(
-    go.Scattergeo(
-                lon = brazil_cnt_df["LongOrig"].values.tolist()+brazil_cnt_df["LongDest"].values.tolist(),
-                lat = brazil_cnt_df["LatOrig"].values.tolist()+brazil_cnt_df["LatDest"].values.tolist(),
-                hoverinfo = 'text',
-                text = scatter_hover_data,
-                mode = 'markers',
-                marker = dict(size = 10, color = 'orangered', opacity=0.1,))
-    )
+cmap = plt.get_cmap('plasma')
+new_cmap = truncate_colormap(cmap, 0.4, 0.9)
 
-## Update graph layout to improve graph styling.
-fig.update_layout(
-                  height=500, width=800, margin={"t":0,"b":0,"l":0, "r":0, "pad":0},
-                  showlegend=False,
-                  title_text = 'Connection Map Depicting Flights between Cities of Brazil',
-                  geo = dict(projection_type = 'natural earth',scope = 'south america'),
-                )
+fig = plt.figure()
 
-fig.show()
+m = Basemap(projection='merc',
+            llcrnrlat = 42,
+            llcrnrlon = -5,
+            urcrnrlat = 52,
+            urcrnrlon = 9,
+            resolution='l')
 
+m.drawmapboundary(fill_color='black')
+m.fillcontinents(color=[0.15,0.15,0.15],lake_color='black',zorder=1)
+m.drawcoastlines(linewidth=0.5,color=[0.5,0.5,0.5])
+m.drawcountries(linewidth=0.5,color=[0.5,0.5,0.5])
 
+x,y = m(lat,long)
 
+for i in range(len(x)-1):
+    col = new_cmap(i/len(x))
+    x1 = [lat[i],lat[i+1]]
+    y1 = [long[i],long[i+1]]
+    m.drawgreatcircle(x1[0],y1[0],x1[1],y1[1],linewidth=1.5,color=col,alpha=0.8)
+    
+plt.scatter(x, y, marker='*', c = range(len(x)), cmap=new_cmap,alpha=0.8,s=80,zorder=2)
+
+fig.savefig('travel_map.jpg')
 
 
 
 
-print('toto')

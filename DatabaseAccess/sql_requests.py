@@ -107,10 +107,10 @@ SQL_GET_C02_CONSUMPTION_RESUME = """
                                 """                                
 
 SQL_GET_FRENCH_TRIP = """
-                            SELECT split_part(geo_point_from, ';', 1) as lat_from,
-                                    split_part(geo_point_from, ';', 2) as long_from,
-                                    split_part(geo_point_to, ';', 1) as lat_to,
-                                    split_part(geo_point_to, ';', 2) as long_to,
+                            SELECT split_part(geo_point_from, ';', 1) as long_from,
+                                    split_part(geo_point_from, ';', 2) as lat_from,
+                                    split_part(geo_point_to, ';', 1) as long_to,
+                                    split_part(geo_point_to, ';', 2) as lat_to,
                                     description, 
                                     section_type
                             FROM french_trip
