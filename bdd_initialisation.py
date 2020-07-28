@@ -54,6 +54,14 @@ if result.fetchone()[0] == None :
 else :
     print("La table 'substitute' existe déjà")
 
+# CREATION TABLES
+result = db_connector.execute_query("SELECT to_regclass('french_trip');")
+
+if result.fetchone()[0] == None :
+    db_connector.execute_nonquery(requests.SQL_CREATE_TABLE_FRENCH_TRIP)
+    print("Création de la table french_trip effectuée.")
+else :
+    print("La table 'french_trip' existe déjà")
 
 # # ## SAUVEGARDE DE LA BDD
 #pas besoin sur un create
@@ -90,7 +98,7 @@ with open(CITY_REFERENTIAL_OUT_PATH, mode="r", encoding="utf-8") as file :
                 ]
 
         db_connector.execute_nonquery(requests.SQL_INSERT_PREFECTURE, values)
-
+#todo  :compléter pour prendre en compte l'update
         data = values
         values.pop(0)
         data.append(values)

@@ -10,8 +10,9 @@ from itertools import chain
 from DatabaseAccess.Connector import Connector
 import DatabaseAccess.sql_requests as sql
 from datetime import datetime
+import re
 
-all_waypoints = []
+all_waypoints = None
 db_connector = Connector()
 
 #API_KEY = '6cf28a3a-59c3-4c82-8cbf-8fa5e64b01da'
@@ -27,7 +28,7 @@ def datetime_str_to_datetime_str(datetime_str, fromFormat, toFormat):
     date_time = datetime.strptime(datetime_str, fromFormat)
     return date_time.strftime(toFormat)  
 
-def compute_fitness(solution, search_type):
+def compute_fitness(solution):
     """
         This function returns the total distance traveled on the current road trip.
         
@@ -58,7 +59,7 @@ def generate_random_agent():
         Creates a random road trip from the waypoints.
     """
     
-    new_random_agent = list(all_waypoints)
+    new_random_agent = list(processed_waypoints)
     random.shuffle(new_random_agent)
     return tuple(new_random_agent)
 
@@ -137,7 +138,7 @@ def run_genetic_algorithm(generations=50, population_size=10):
             if agent_genome in population_fitness:
                 continue
 
-            population_fitness[agent_genome] = compute_fitness(agent_genome, DURATION_SEARCH)
+            population_fitness[agent_genome] = compute_fitness(agent_genome)
 
         # Take the top 10% shortest road trips and produce offspring each from them
         new_population = []
@@ -173,22 +174,29 @@ def run_genetic_algorithm(generations=50, population_size=10):
 
 waypoint_co2 = {}
 waypoint_durations = {}
+search_type = DURATION_SEARCH
 
+#get all prefectures referential
+results = db_connector.execute_query(sql.SQL_GET_ALL_PREFECTURE)
+all_waypoints = pd.DataFrame(results.fetchall())
+
+#check if journeys are already computed
 saved_waypoints = db_connector.execute_query('SELECT count(*) FROM journey')
 
+travel_date = datetime.now().strftime("%Y%m%dT%H%M%S")
+
+bad_waypoints = []
 saved_waypoints.fetchall()
 # if not len(saved_waypoints.fetchall()) == 0:
 if True == False:
     print("le référentiel des voyage existe déjà")
 else :
-    results = db_connector.execute_query(sql.SQL_GET_ALL_PREFECTURE)
-    all_waypoints = results.fetchall()
-
-    for (waypoint1, waypoint2) in combinations(all_waypoints, 2):
+    for (from_city, to_city) in combinations(all_waypoints[0].values, 2):
         try:
-            from_city = waypoint1[0]
-            to_city = waypoint2[0]
-            route = requests.get(API_NAVITIA.format(from_city, to_city, "20200730T152506", API_KEY))
+            if int(from_city) in bad_waypoints or int(to_city) in bad_waypoints:
+                continue
+
+            route = requests.get(API_NAVITIA.format(int(from_city), int(to_city), travel_date, API_KEY))
             response = json.loads(route.text)
 
             mid_duration = 0
@@ -201,8 +209,20 @@ else :
             waypoint_durations[frozenset([from_city, to_city])] = mid_duration/len(response["journeys"])
         
         except Exception as e:
-            print("Error with finding the route between %s and %s." % (from_city, to_city))
-            db_connector.execute_query(sql.SQL_INSERT_CITY_WITHOUT_STATION, [from_city, to_city, 0 ])
+            print("Error with finding the route between %s and %s : %s" % (from_city, to_city, response["error"]["message"]))
+            if 'no destination point' == response["error"]["message"]:
+                db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, [to_city])
+                bad_waypoints.append(int(to_city))
+            
+            if 'no origin point' == response["error"]["message"]:
+                db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, [from_city])
+                bad_waypoints.append(int(from_city))
+            
+            for bad_insee_code in re.findall('The entry point: admin:fr:([0-9]+) is not valid', response["error"]["message"]):
+                if not int(bad_insee_code) in bad_waypoints:
+                    db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, [bad_insee_code])
+                    bad_waypoints.append(int(bad_insee_code))
+
 
     #Enregistrement des trajets point à point
     for (waypoint1, waypoint2) in waypoint_co2.keys():
@@ -215,16 +235,54 @@ else :
     #commit voyage dans la bdd
     db_connector.commit()
 
+def store_section(description, geo_point_from, geo_point_to, section_type, duration = None, co2 = None):
+    indentation = ''
+    if section_type == 'DELAY' or section_type == 'SUB_SECTION':
+        indentation = '     -> '
+
+    print(indentation + description)
+    db_connector.execute_nonquery(sql.SQL_INSERT_FRENCH_TRIP_SECTION, [geo_point_from, geo_point_to, description, section_type, duration, co2  ] )
+
+def save_trip_section(from_city_insee, to_city_insee, best_travel):
+    
+    from_city_name =  all_waypoints.loc[all_waypoints[0] == from_city_insee].values[0][2]
+    to_city_name =  all_waypoints.loc[all_waypoints[0] == to_city_insee].values[0][2]
+    from_city_gps =  all_waypoints.loc[all_waypoints[0] == to_city_insee].values[0][3]
+    to_city_gps =  all_waypoints.loc[all_waypoints[0] == to_city_insee].values[0][3]
+
+    store_section('Voyage de {} à {}. Départ à {} - Arrivée à {} après {} transferts '.format( from_city_name, to_city_name, datetime_str_to_datetime_str(best_travel['departure_date_time'], "%Y%m%dT%H%M%S", "%H:%M:%S-%d/%Y/%m"), datetime_str_to_datetime_str(best_travel['arrival_date_time'], "%Y%m%dT%H%M%S", "%H:%M:%S-%d/%Y/%m"), best_travel['nb_transfers']),
+                    None,
+                    None, 
+                    'SECTION', 
+                    best_travel['duration'],
+                    best_travel['co2_emission']["value"]
+                    )
+
+    for section in best_travel['sections']:
+        if 'from' in section:
+            if not section['type'] == 'crow_fly':
+                if not 'transfer_type' in section or not section['transfer_type'] == 'walking': #vilaine faute d'orthographe sur transfer_type
+                    store_section('{} - {} ({})'.format(section['from']['name'], section['to']['name'], section['display_informations']['physical_mode']),
+                                    from_city_gps,
+                                    to_city_gps, 
+                                    'SUB_SECTION')
+            #else : initiale section, not used
+        else:
+            store_section('Waiting {} minutes'.format(section['duration']/60),
+                            None,
+                            None, 
+                            'DELAY')
+
 waypoint_co2 = {}
 waypoint_durations = {}
-all_waypoints = set()
+processed_waypoints = set()
 
 waypoints = db_connector.execute_query(sql.SQL_GET_WAYPOINTS)
 
 for row in waypoints:
     waypoint_co2[frozenset([int(row[0]), int(row[1])])] = row[2]
     waypoint_durations[frozenset([int(row[0]), int(row[1])])] = row[3]
-    all_waypoints.update([row[0], row[1]])
+    processed_waypoints.update([row[0], row[1]])
 
 run_genetic_algorithm()
 
@@ -233,32 +291,37 @@ journey_groups = Counter(chain(*travel_results))
 top_journeys = journey_groups.most_common(1)[0][0]
 
 print(top_journeys)
-
+travel_date = datetime.now().strftime("%Y%m%dT%H%M%S")
 #calcul des horaires de voyage réels pour le trajet le plus optimisé 
-travels = []
 trip_date = start_date
 top_journeys = top_journeys
-travel_date = datetime.now().strftime("%Y%m%dT%H%M%S")
-print('Départ du calcul du voyage à %s' % (datetime_str_to_datetime_str(travel_date,"%Y%m%dT%H%M%S", "%H:%M:%S-%d/%Y/%m")))
+print('Départ du calcul du voyage à %s' % (datetime_str_to_datetime_str(travel_date,"%Y%m%dT%H%M%S", "%H:%M:%S-%d/%m/%Y")))
 
+db_connector.execute_nonquery(sql.SQL_REINIT_FRENCH_TRIP)
 for i in range(len(top_journeys)-1):
 #for journey in top_journeys:
-    from_city = top_journeys[i]
-    to_city = top_journeys[i+1]
-    route = requests.get(API_NAVITIA.format( from_city, to_city, travel_date, API_KEY))
-    best_travel = json.loads(route.text)[0]
+    from_city_insee = top_journeys[i]
+    to_city_insee = top_journeys[i+1]
+    route = requests.get(API_NAVITIA.format( from_city_insee, to_city_insee, travel_date, API_KEY))
+    travels = json.loads(route.text)
 
-    print('Voyage de %s à %s. Départ à %s ' % ( from_city, to_city, datetime_str_to_datetime_str(best_travel['departure_date_time'], "%Y%m%dT%H%M%S", "%H:%M:%S-%d/%Y/%m")) )
-    print('Arrivé à %s après %s transferts' % ( datetime_str_to_datetime_str(best_travel['arrival_date_time'], "%Y%m%dT%H%M%S", "%H:%M:%S-%d/%Y/%m"), best_travel['nb_transfers']))
+    best_travel = travels["journeys"][0] 
+    for travel in travels["journeys"]:
+        if search_type == CO2_SEARCH and float(best_travel['co2_emission']['value']) > float(travel['co2_emission']['value']):
+            best_travel = travel
+        elif  best_travel['arrival_date_time'] > travel['arrival_date_time']:
+                best_travel = travel
 
-    for section in best_travel['sections']:
-        if 'from' in section:
-            if not section['type'] == 'crow_fly':
-                if not 'transfer_type' in section or not section['transfer_type'] == 'walking': #vilaine faute d'orthographe sur transfer_type
-                    print('       -> %s - %s (%s)' % (section['from']['name'], section['to']['name'], section['display_informations']['physical_mode']))
-            #else : initiale section, not used
-        else:
-            print('       -> Waiting %s minutes' % (section['duration']/60))
+    save_trip_section(from_city_insee, to_city_insee, best_travel)
 
     travel_date = best_travel['arrival_date_time']
+
+db_connector.commit()
+
+resume = db_connector.execute_query(sql.SQL_GET_C02_CONSUMPTION_RESUME)
+resume = resume.fetchone()
+db_connector.execute_nonquery(sql.SQL_INSERT_FRENCH_TRIP_SECTION, [None, None, 'Trip completed', 'INFO', resume[0], resume[1]  ] )
+
+print('Travel complete. Have  nive trip!!!')
+
         
