@@ -108,3 +108,8 @@ with open(CITY_REFERENTIAL_OUT_PATH, mode="r", encoding="utf-8") as file :
     print('Base de donnée initialisée')
 
 
+# def save_journeys():
+    
+#     waypoints = db_connector.execute_nonquery(requests.SQL_INSERT_PREFECTURE, values)
+    
+#     SQL_GET_WAYPOINTS

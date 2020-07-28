@@ -41,10 +41,10 @@ m = Basemap(projection='merc',
             urcrnrlon = 9,
             resolution='l')
 
-m.drawmapboundary(fill_color='black')
-m.fillcontinents(color=[0.15,0.15,0.15],lake_color='black',zorder=1)
-m.drawcoastlines(linewidth=0.5,color=[0.5,0.5,0.5])
-m.drawcountries(linewidth=0.5,color=[0.5,0.5,0.5])
+m.drawmapboundary(fill_color=[0.9,0.9,0.9])
+m.fillcontinents(color='white',lake_color=[0.9,0.9,0.9],zorder=1)
+m.drawcoastlines(linewidth=0.5,color=[0.15,0.15,0.15])
+m.drawcountries(linewidth=1,color=[0.15,0.15,0.15])
 
 x,y = m(lat,long)
 
@@ -54,9 +54,10 @@ for i in range(len(x)-1):
     y1 = [long[i],long[i+1]]
     m.drawgreatcircle(x1[0],y1[0],x1[1],y1[1],linewidth=1.5,color=col,alpha=0.8)
     
-plt.scatter(x, y, marker='*', c = range(len(x)), cmap=new_cmap,alpha=0.8,s=80,zorder=2)
+plt.scatter(x, y, c = range(len(x)), cmap=new_cmap,alpha=0.8,s=80,zorder=2)
 
 fig.savefig('travel_map.jpg')
+fig.show()
 
 
 

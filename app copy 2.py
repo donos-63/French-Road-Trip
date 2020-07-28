@@ -1,5 +1,4 @@
 import pandas as pd
-import googlemaps
 from itertools import combinations
 import numpy as np
 import random
@@ -16,16 +15,17 @@ all_waypoints = None
 db_connector = Connector()
 
 #API_KEY = '6cf28a3a-59c3-4c82-8cbf-8fa5e64b01da'
-#API_KEY = '3fd6041b-beda-4a79-9f1a-09bc263a1dfd'
+API_KEY = '3fd6041b-beda-4a79-9f1a-09bc263a1dfd'
 #API_KEY = 'd3f69ecb-68f5-477e-b1bb-d58208f936c5'
 #API_KEY = '78cc6f8e-68d6-450d-89d0-8a085b6c5af5'
 ##API_KEY = 'b84ebebd-476c-4204-b195-7ffeb67043e7'
 #API_KEY = 'cc3bc7b1-4c27-4176-aefd-15017c363178'
-API_KEY = '57f195e9-78a9-4fd7-a10c-312f0502d659'
+#API_KEY = '57f195e9-78a9-4fd7-a10c-312f0502d659'
 
 API_NAVITIA = "https://api.sncf.com/v1/coverage/sncf/journeys?key={3}&from=admin:fr:{0}&to=admin:fr:{1}&datetime={2}&min_nb_journeys=10"
-DURATION_SEARCH = "DURATION_SEARCH"
-CO2_SEARCH = "CO2_SEARCH"
+IS_MIN_CO2_SEARCH = True
+IS_FORCE_COMPUTE = False
+
 travel_results = []
 start_date = "20200730T152506"
 
@@ -48,7 +48,7 @@ def compute_fitness(solution):
         waypoint2 = int(solution[index])
         
         try:
-            if search_type == CO2_SEARCH:
+            if IS_MIN_CO2_SEARCH:
                 waypoints = waypoint_co2[frozenset([waypoint1, waypoint2])]
                 solution_fitness += waypoint_co2[waypoints]
             else:
@@ -177,78 +177,6 @@ def run_genetic_algorithm(generations=50, population_size=10):
 
         population = new_population
 
-waypoint_co2 = {}
-waypoint_durations = {}
-search_type = DURATION_SEARCH
-
-#get all prefectures referential
-results = db_connector.execute_query(sql.SQL_GET_ALL_PREFECTURE)
-all_waypoints = pd.DataFrame(results.fetchall())
-
-#check if journeys are already computed
-saved_waypoints = db_connector.execute_query('SELECT count(*) FROM journey')
-
-travel_date = datetime.now().strftime("%Y%m%dT%H%M%S")
-
-bad_waypoints = []
-saved_waypoints.fetchall()
-# if not len(saved_waypoints.fetchall()) == 0:
-if True == False:
-    print("le référentiel des voyage existe déjà")
-else :
-    k = 0 #todo : à supprimer
-    for (from_city, to_city) in combinations(all_waypoints[0].values, 2):
-        try:
-            k = k + 1
-            print(k)
-
-            if int(from_city) in bad_waypoints or int(to_city) in bad_waypoints:
-                continue
-
-            route = requests.get(API_NAVITIA.format(int(from_city), int(to_city), travel_date, API_KEY))
-            response = json.loads(route.text)
-
-            mid_duration = 0
-            mid_co2 = 0
-            for journey in response["journeys"]:
-                mid_duration += journey["duration"]
-                mid_co2 += journey["co2_emission"]["value"]
-
-            waypoint_co2[frozenset([from_city, to_city])] = mid_co2/len(response["journeys"])
-            waypoint_durations[frozenset([from_city, to_city])] = mid_duration/len(response["journeys"])
-        
-        except Exception as e:
-            print("Error with finding the route between %s and %s : %s" % (from_city, to_city, response["error"]["message"]))
-            if 'no destination point' == response["error"]["message"]:
-         #       db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, [to_city])
-                bad_waypoints.append(int(to_city))
-            
-            if 'no origin point' == response["error"]["message"]:
-         #       db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, [from_city])
-                bad_waypoints.append(int(from_city))
-            
-            for bad_insee_code in re.findall('The entry point: admin:fr:([0-9]+) is not valid', response["error"]["message"]):
-                if not int(bad_insee_code) in bad_waypoints:
-         #           db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, [bad_insee_code])
-                    bad_waypoints.append(int(bad_insee_code))
-
-    #Enregistrement des trajets point à point
-    for (waypoint1, waypoint2) in waypoint_co2.keys():
-        waypoint = [waypoint1,
-                    waypoint2,
-                    str(waypoint_co2[frozenset([waypoint1, waypoint2])]),
-                    str(int(waypoint_durations[frozenset([waypoint1, waypoint2])]))]
-        db_connector.execute_nonquery(sql.SQL_INSERT_WAYPOINT, waypoint)
-    
-    #commit voyage dans la bdd
-    db_connector.commit()
-
-    #enregistrement des préfectures non référencées (pas de gare)
-    print(bad_waypoints)
-    for bad_city in bad_waypoints:
-        db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, bad_city)
-    db_connector.commit()
-
 def store_section(description, geo_point_from, geo_point_to, section_type, duration = None, co2 = None):
     indentation = ''
     if section_type == 'DELAY' or section_type == 'SUB_SECTION':
@@ -289,6 +217,69 @@ def save_trip_section(from_city_insee, to_city_insee, best_travel):
 
 waypoint_co2 = {}
 waypoint_durations = {}
+
+#get all prefectures referential
+results = db_connector.execute_query(sql.SQL_GET_ALL_PREFECTURE)
+all_waypoints = pd.DataFrame(results.fetchall())
+
+#Vérification si les trajets péfecture à préfecture ont été déjà calculés
+saved_waypoints = db_connector.execute_query(sql.SQL_GET_WAYPOINTS)
+
+#Dans le précalcul du trajet optimal, utilisation de la date courante
+travel_date = datetime.now().strftime("%Y%m%dT%H%M%S")
+bad_waypoints = []
+
+if saved_waypoints.rowcount > 0 and not IS_FORCE_COMPUTE:
+    print("le référentiel des voyage existe déjà")
+else :
+    for (from_city, to_city) in combinations(all_waypoints[0].values, 2):
+        try:
+            if int(from_city) in bad_waypoints or int(to_city) in bad_waypoints:
+                continue
+
+            route = requests.get(API_NAVITIA.format(int(from_city), int(to_city), travel_date, API_KEY))
+            response = json.loads(route.text)
+
+            mid_duration = 0
+            mid_co2 = 0
+            for journey in response["journeys"]:
+                mid_duration += journey["duration"]
+                mid_co2 += journey["co2_emission"]["value"]
+
+            waypoint_co2[frozenset([from_city, to_city])] = mid_co2/len(response["journeys"])
+            waypoint_durations[frozenset([from_city, to_city])] = mid_duration/len(response["journeys"])
+        
+        except Exception as e:
+            print("Error with finding the route between %s and %s : %s" % (from_city, to_city, response["error"]["message"]))
+            if 'no destination point' == response["error"]["message"]:
+                bad_waypoints.append(int(to_city))
+            
+            if 'no origin point' == response["error"]["message"]:
+                bad_waypoints.append(int(from_city))
+            
+            for bad_insee_code in re.findall('The entry point: admin:fr:([0-9]+) is not valid', response["error"]["message"]):
+                if not int(bad_insee_code) in bad_waypoints:
+                    bad_waypoints.append(int(bad_insee_code))
+
+    #Enregistrement des trajets point à point (préfecture à préfecture)
+    for (waypoint1, waypoint2) in waypoint_co2.keys():
+        waypoint = [waypoint1,
+                    waypoint2,
+                    str(waypoint_co2[frozenset([waypoint1, waypoint2])]),
+                    str(int(waypoint_durations[frozenset([waypoint1, waypoint2])]))]
+        db_connector.execute_nonquery(sql.SQL_INSERT_WAYPOINT, waypoint)
+    
+    #commit trajets unitaires dans la bdd
+    db_connector.commit()
+
+    #enregistrement des préfectures non trouvée (pas de gare)
+    print(bad_waypoints)
+    for bad_city in bad_waypoints:
+        db_connector.execute_nonquery(sql.SQL_INSERT_CITY_WITHOUT_STATION, str(bad_city))
+    db_connector.commit()
+
+waypoint_co2 = {}
+waypoint_durations = {}
 processed_waypoints = set()
 
 waypoints = db_connector.execute_query(sql.SQL_GET_WAYPOINTS)
@@ -313,22 +304,28 @@ print('Départ du calcul du voyage à %s' % (datetime_str_to_datetime_str(travel
 
 db_connector.execute_nonquery(sql.SQL_REINIT_FRENCH_TRIP)
 for i in range(len(top_journeys)-1):
-#for journey in top_journeys:
-    from_city_insee = top_journeys[i]
-    to_city_insee = top_journeys[i+1]
-    route = requests.get(API_NAVITIA.format( from_city_insee, to_city_insee, travel_date, API_KEY))
-    travels = json.loads(route.text)
+    try:
+        from_city_insee = top_journeys[i]
+        to_city_insee = top_journeys[i+1]
+        route = requests.get(API_NAVITIA.format( int(from_city_insee), int(to_city_insee), travel_date, API_KEY))
+        travels = json.loads(route.text)
 
-    best_travel = travels["journeys"][0] 
-    for travel in travels["journeys"]:
-        if search_type == CO2_SEARCH and float(best_travel['co2_emission']['value']) > float(travel['co2_emission']['value']):
-            best_travel = travel
-        elif  best_travel['arrival_date_time'] > travel['arrival_date_time']:
+        #Contrôle des voyage reçus pour identifier le plus adapté à recherche
+        best_travel = travels["journeys"][0] 
+        for travel in travels["journeys"]:
+            if IS_MIN_CO2_SEARCH and float(best_travel['co2_emission']['value']) > float(travel['co2_emission']['value']):
                 best_travel = travel
+            elif  best_travel['arrival_date_time'] > travel['arrival_date_time']:
+                    best_travel = travel
 
-    save_trip_section(from_city_insee, to_city_insee, best_travel)
+        #sauvegarde du trajet 'i' en base
+        save_trip_section(from_city_insee, to_city_insee, best_travel)
 
-    travel_date = best_travel['arrival_date_time']
+        #le prochain trajet devra avoir une date de départ > à la date de ce trajet 
+        travel_date = best_travel['arrival_date_time']
+
+    except Exception as e:
+        print ("!!  Fail to compute travel between '%s' and '%s'" % (from_city_insee, to_city_insee) )
 
 db_connector.commit()
 
