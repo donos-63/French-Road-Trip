@@ -21,7 +21,9 @@ SQL_CREATE_TABLE_JOURNEY = """
                             CREATE TABLE journey (insee_code_from TEXT, 
                                                   insee_code_to TEXT, 
                                                   co2 FLOAT, 
-                                                  duration INTEGER)
+                                                  duration INTEGER,
+                                                  FOREIGN KEY (insee_code_from) REFERENCES prefecture (insee_code),
+												  FOREIGN KEY (insee_code_to) REFERENCES prefecture (insee_code))
                             """
 
                                                   
