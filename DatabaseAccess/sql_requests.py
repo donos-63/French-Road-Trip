@@ -98,12 +98,25 @@ SQL_INSERT_FRENCH_TRIP_SECTION = """
                             VALUES (%s, %s, %s, %s, %s, %s)
                                 """
 
+SQL_GET_FRENCH_TRIP_RESUME = """
+                            SELECT description, section_type FROM french_trip 
+                            ORDER BY id ASC
+                                """
+
 SQL_REINIT_FRENCH_TRIP = """
                          TRUNCATE TABLE french_trip
                         """
 
+SQL_REINIT_JOURNEY = """
+                         TRUNCATE TABLE journey
+                        """              
+
+SQL_REINIT_PREFECTURE = """
+                         TRUNCATE TABLE prefecture
+                        """                                     
+
 SQL_GET_C02_CONSUMPTION_RESUME = """
-                                select SUM(duration), SUM(co2_emission) from french_trip
+                                select SUM(duration) duration_total, SUM(co2_emission) co2_total from french_trip
                                 """                                
 
 SQL_GET_FRENCH_TRIP = """

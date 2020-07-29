@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    % include('head.tpl', title='Head')
+</head>
+
+<body>
+    % include('top_nav.tpl', title='Top navigation')
+
+    <div class="container-fluid">
+        <form action="/consult" method="get">
+            <div class="row">
+                % include('nav.tpl', title='Navigation')
+                <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+                    <div
+                        class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+
+                        <div class="table-responsive">
+                            <table class="table table-striped table-sm">
+                                <thead>
+                                    <tr>
+                                        <th style="width:auto">Album</th>
+                                        <th style="width:30px"></th>
+                                        <th style="width:100%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <td>
+                                        <tr>
+                                            <span>Vider la table 'prefecture'</span>
+                                            <span>La table 'prefecture' contient le référentiel des préfectures. Vider cette table entrainera le vidage des tables 'journey' et 'road_trip'</span>
+                                        </tr>
+                                        <tr>
+                                            <span>Vider la table 'journey'</span>
+                                            <span>La table 'journey' contient la simulation des chemins "préfecture vers préfecture" obtenu par l'API . Une fois la table vidée, il sera nécessaire de la re-remplir en faisant appel à l'API SNCF (traitement TRES long) </span>
+                                        </tr>
+                                        <tr>
+                                            <span>Vider la table 'journey'</span>
+                                            <span>La table 'journey' contient la simulation des chemins "préfecture vers préfecture" obtenu par l'API . Une fois la table vidée, il sera nécessaire de la re-remplir en faisant appel à l'API SNCF (traitement TRES long) </span>
+                                        </tr>
+                                    </td>
+                                    <td>
+                                        <td>
+                                            <img id="originalcover" src="" style="max-height:500px" />
+                                        </td>
+                                        <td />
+                                        <td>
+                                            <img id="transformedcover" src="/path/to/cover" style="max-height:500px" />
+                                        </td>
+                                        <td>
+                                            <ul id="transformedinfo">
+                                                % for identification in identifications:
+                                                <li><b>{{identification[0]}}</b> - {{identification[1]}}%</li>
+                                                % end
+                                            </ul>
+                                        </td>
+                                    </td>
+                                </tbody>
+                            </table>
+                        </div>
+                </main>
+            </div>
+        </form>
+    </div>
+    % include('scripts.tpl', title='Scripts')
+</body>
+
+</html>

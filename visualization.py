@@ -1,10 +1,13 @@
-from DatabaseAccess.Connector import Connector
-import DatabaseAccess.sql_requests as sql
+import os, sys
 import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
 import matplotlib.colors as colors
 import numpy as np
+from DatabaseAccess.Connector import Connector
+import DatabaseAccess.sql_requests as sql
+
+MAP_FILE_PATH = os.path.dirname(sys.argv[0]) + os.sep + 'tmp' + os.sep +'travel_map.jpg'
 
 plt.rcParams['figure.figsize'] = [20, 20]
 np.set_printoptions(suppress=True)
@@ -56,8 +59,7 @@ for i in range(len(x)-1):
     
 plt.scatter(x, y, c = range(len(x)), cmap=new_cmap,alpha=0.8,s=80,zorder=2)
 
-fig.savefig('travel_map.jpg')
-fig.show()
+fig.savefig(MAP_FILE_PATH)
 
 
 

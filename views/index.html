@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    % include('head.tpl', title='Head')
+</head>
+
+<body>
+    % include('top_nav.tpl', title='Top navigation')
+
+    <div class="container-fluid">
+        <div class="row">
+
+            % include('nav.tpl', title='Navigation')
+
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+                <div
+                    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+
+                    <form action="/load_data" method="GET">
+                        <div class="form-group">
+                            <div class="alert alert-primary" role="alert">
+                                <span>Thomas C. & Mathieu S présentent ....</span>
+                                <span>Road-Trip en France</span>
+                            </div>
+                            <div class="tenor-gif-embed" data-postid="5249741" data-share-method="host"
+                                data-width="800px" data-aspect-ratio="1.859504132231405">
+                           </div>
+                            <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+                            <br>
+                            <span style="margin:15px 0">Statut de l'application</span>
+                            <br>
+                            <span>{{prefectures_table_state}}</span>
+                            <span>{{journey_table_state}}</span>
+                            <span>{{french_trip_table_state}}</span>
+                        </div>
+
+                    </form>
+                </div>
+            </main>
+        </div>
+    </div>
+    % include('scripts.tpl', title='Scripts')
+</body>
+
+</html>
