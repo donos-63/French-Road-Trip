@@ -9,19 +9,19 @@
           </li>
           <li class="nav-item">
             <a class="nav-link" href="/consult">
-              <span data-feather="clock"></span>
+              <span data-feather="map-pin"></span>
               Consulter le voyage
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="/initialize">
-              <span data-feather="mic"></span>
+              <span data-feather="settings"></span>
               Initialisation
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/maintain">
-              <span data-feather="clock"></span>
+            <a class="nav-link" href="/manage">
+              <span data-feather="alert-triangle"></span>
               Maintenance
             </a>
           </li>

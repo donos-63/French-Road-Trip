@@ -1,3 +1,8 @@
+"""
+    List of queries used by the application
+"""
+
+#Create instructions
 SQL_CREATE_TABLE_PREFECTURE = """
     CREATE TABLE prefecture (insee_code TEXT PRIMARY KEY, 
                             postal_code TEXT,
@@ -43,6 +48,7 @@ SQL_CREATE_TABLE_FRENCH_TRIP = """
 
                             """
 
+#Insert instructions
 #todo : on conflict do update
 SQL_INSERT_PREFECTURE = """
                         INSERT 
@@ -63,7 +69,7 @@ SQL_INSERT_PREFECTURE = """
                                         departement_code, 
                                         area_code) 
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT DO NOTHING 
+                        ON CONFLICT DO NOTHING  
                         """
 
 SQL_INSERT_WAYPOINT = """
@@ -72,19 +78,6 @@ SQL_INSERT_WAYPOINT = """
                                              co2, 
                                              duration)
                         VALUES (%s, %s, %s, %s)
-                        """
-
-SQL_GET_WAYPOINTS = """
-                        SELECT insee_code_from, 
-                            insee_code_to, 
-                            co2, 
-                            duration
-                        FROM journey
-                    """
-
-SQL_GET_ALL_PREFECTURE = """
-                            SELECT insee_code, postal_code, city, geo_lat || ';' || geo_long as geo_point
-                            FROM prefecture
                         """
 
 SQL_INSERT_CITY_WITHOUT_STATION = """
@@ -98,22 +91,24 @@ SQL_INSERT_FRENCH_TRIP_SECTION = """
                             VALUES (%s, %s, %s, %s, %s, %s)
                                 """
 
+#Select instructions
+SQL_GET_WAYPOINTS = """
+                        SELECT insee_code_from, 
+                            insee_code_to, 
+                            co2, 
+                            duration
+                        FROM journey
+                    """
+
+SQL_GET_ALL_PREFECTURE = """
+                            SELECT insee_code, postal_code, city, geo_lat || ';' || geo_long as geo_point
+                            FROM prefecture
+                        """
+
 SQL_GET_FRENCH_TRIP_RESUME = """
                             SELECT description, section_type FROM french_trip 
                             ORDER BY id ASC
                                 """
-
-SQL_REINIT_FRENCH_TRIP = """
-                         TRUNCATE TABLE french_trip
-                        """
-
-SQL_REINIT_JOURNEY = """
-                         TRUNCATE TABLE journey
-                        """              
-
-SQL_REINIT_PREFECTURE = """
-                         TRUNCATE TABLE prefecture
-                        """                                     
 
 SQL_GET_C02_CONSUMPTION_RESUME = """
                                 select SUM(duration) duration_total, SUM(co2_emission) co2_total from french_trip
@@ -130,3 +125,16 @@ SQL_GET_FRENCH_TRIP = """
                             WHERE section_type = 'SUB_SECTION'
                             ORDER BY id ASC
                             """                                
+
+#Delete instructions
+SQL_REINIT_FRENCH_TRIP = """
+                         DELETE FROM french_trip
+                        """
+
+SQL_REINIT_JOURNEY = """
+                         TRUNCATE TABLE journey
+                        """              
+
+SQL_REINIT_PREFECTURE = """
+                         DELETE FROM prefecture
+                        """                                     

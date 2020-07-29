@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    % include('head.tpl', title='Head')
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.9/jquery-ui.js"></script>
+    <script>
+        $(document).ready(function () {
+            $("#datepicker").datepicker();
+        });
+    </script>
+</head>
+
+<body>
+    % include('top_nav.tpl', title='Top navigation')
+
+    <div class="container-fluid">
+        <form action="/consult" method="get">
+            <div class="row">
+                % include('nav.tpl', title='Navigation')
+                <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+                    <div
+                        class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <div id="demo" class="collapse">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width:auto">Date de départ</th>
+                                        <th style="width:30px"></th>
+                                        <th style="width:auto">Forcer la récupération des trajets</th>
+                                        <th style="width:30px"></th>
+                                        <th style="width:100%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <input type="text" id="datepicker"></p>
+                                        </td>
+                                        <td></td>
+                                        <td>
+                                            <input type="checkbox" name="force" value="false">
+                                        </td>
+                                        <td></td>
+                                        <td>
+
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div
+                        class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+
+                        <img id="transformedcover" src="/roadtrip_map" style="max-height:800px" />
+                    </div>
+                    <div
+                        class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <ul id="transformedinfo">
+                            % i = 1
+                            % for trip in trip_results:
+                            % if trip[1] == 'SECTION':
+                            <li><b>({{i}}) - {{trip[0]}}</b></li>
+                            % i = i+1
+                            % else:
+                            <li style="margin-left:50px;">{{trip[0]}}</li>
+                            %end
+                            % end
+                        </ul>
+                    </div>
+                </main>
+            </div>
+        </form>
+    </div>
+    % include('scripts.tpl', title='Scripts')
+</body>
+
+</html>

@@ -1,6 +1,6 @@
 import random
 
-def compute_fitness(solution):
+def compute_fitness(solution, is_min_co2_search):
     """
         This function returns the total distance traveled on the current road trip.
 
@@ -96,7 +96,7 @@ def generate_random_population(pop_size, waypoints):
     return random_population
 
 
-def run_genetic_algorithm(waypoints, generations=100, population_size=100):
+def run_genetic_algorithm(waypoints, is_min_co2_search, generations=100, population_size=100):
     """
         The core of the Genetic Algorithm.
 
@@ -120,7 +120,7 @@ def run_genetic_algorithm(waypoints, generations=100, population_size=100):
             if agent_genome in population_fitness:
                 continue
 
-            population_fitness[agent_genome] = compute_fitness(agent_genome)
+            population_fitness[agent_genome] = compute_fitness(agent_genome, is_min_co2_search)
 
         # Take the top 10% shortest road trips and produce offspring each from them
         new_population = []

@@ -2,14 +2,33 @@ import psycopg2 #provider bdd postgres
 import urllib.parse as urlp
 
 class Connector:
+    """Provide methods to connect to the saas database
+    """
 
     def __init__(self):
+        """on create, initialise connection to db
+        """
         self.conn = self.__connection()
-        print("Connector class is initiated")
+
+    def __enter__(self):
+        """on method used
+        """
+        return self
+
+    def __exit__(self, type, value, tb):
+        """on instance relased
+
+        Args:
+            __exit__ based arguments
+        """
+        if not self.conn == None:
+            self.conn.close()
 
     def __connection(self):
-        """
-        This function will return SQL Lite connection
+        """This function will return SQL Lite connection
+
+        Returns:
+            [Connection]: connection instance to the database
         """
         #Initialisation du provider de donnée
         urlp.uses_netloc.append("postgres")
@@ -22,18 +41,39 @@ class Connector:
             port=url.port
             )
          
-        print("Initialisation de l'accés aux données")
         return conn
 
     def execute_query(self, sql, args = None):
+        """Execute sql query with returns
+
+        Args:
+            sql ([str]): sql query 
+            args ([str[]], optional): query arguments
+
+        Returns:
+            [cursor]: resultset
+        """
         cur = self.conn.cursor()
         cur.execute(sql, args)
 
         return cur
 
     def execute_nonquery(self, sql, args = None):
+        """Execute sql query with returns
+
+        Args:
+            sql ([str]): sql query 
+            args ([str[]], optional): query arguments
+        """
         cur = self.conn.cursor()
         cur.execute(sql, args)
 
     def commit(self):
+        """commit transaction
+        """
         self.conn.commit()
+
+    def rollback(self):
+        """rollback transaction
+        """
+        self.conn.rollback()

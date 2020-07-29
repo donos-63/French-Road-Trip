@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    % include('head.tpl', title='Head')
+</head>
+
+<body>
+    % include('top_nav.tpl', title='Top navigation')
+
+    <div class="container-fluid">
+        <form action="/initialize" method="get">
+            <div class="row">
+                % include('nav.tpl', title='Navigation')
+                <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+                    <div
+                        class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width:500px">Fonctionnalité</th>
+                                        <th style="width:30px"></th>
+                                        <th style="width:100%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <span><b>Charger la table 'prefecture'</b></span>
+                                            <br>
+                                            <span><i>Alimente la table préfecture à partir du référentiel csv des villes
+                                                    de France. Cette fonction supprime les données existantes</i></span>
+                                        </td>
+                                        <td></td>
+                                        <td>
+                                            <button type="submit" name="operation" value="init_prefecture"
+                                                style="background:transparent; border: none; color: blue">
+                                                créer
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>
+                                            <span><b>Lancer l'optimisation du voyage</b></span>
+                                            <br>
+                                            <span><i>Exécute l'algorithme de génération du voyage</i></span>
+                                        </td>
+                                        <td></td>
+                                        <td>
+                                            <button type="submit" name="operation" value="init_trip"
+                                                style="background:transparent; border: none; color: blue;">
+                                                initialiser
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                </main>
+            </div>
+        </form>
+    </div>
+    % include('scripts.tpl', title='Scripts')
+</body>
+
+</html>
