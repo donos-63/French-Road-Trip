@@ -64,6 +64,8 @@
                             % if trip[1] == 'SECTION':
                             <li><b>({{i}}) - {{trip[0]}}</b></li>
                             % i = i+1
+                            % else if trip[1] == 'INFO':
+                            <li>{{trip[0]}}</li>
                             % else:
                             <li style="margin-left:50px;">{{trip[0]}}</li>
                             %end

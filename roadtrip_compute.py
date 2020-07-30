@@ -11,14 +11,15 @@ from DatabaseAccess.Connector import Connector
 import DatabaseAccess.sql_requests as sql
 import bdd_management
 import algorithms
+import visualization
 
 
 #Liste des clefs générées pour utiliser l'API
-API_KEY = '6cf28a3a-59c3-4c82-8cbf-8fa5e64b01da'
+#API_KEY = '6cf28a3a-59c3-4c82-8cbf-8fa5e64b01da'
 #API_KEY = '3fd6041b-beda-4a79-9f1a-09bc263a1dfd'
 #API_KEY = 'd3f69ecb-68f5-477e-b1bb-d58208f936c5'
 #API_KEY = '78cc6f8e-68d6-450d-89d0-8a085b6c5af5'
-##API_KEY = 'b84ebebd-476c-4204-b195-7ffeb67043e7'
+API_KEY = 'b84ebebd-476c-4204-b195-7ffeb67043e7'
 #API_KEY = 'cc3bc7b1-4c27-4176-aefd-15017c363178'
 #API_KEY = '57f195e9-78a9-4fd7-a10c-312f0502d659'
 
@@ -61,7 +62,7 @@ def store_section(db_connector, description, geo_point_from, geo_point_to, secti
     db_connector.execute_nonquery(sql.SQL_INSERT_FRENCH_TRIP_SECTION, [
                                   geo_point_from, geo_point_to, description, section_type, duration, co2])
 
-def save_trip_section(db_connector, from_city_insee, to_city_insee, best_travel):
+def save_trip_section(db_connector, all_waypoints, from_city_insee, to_city_insee, best_travel):
     """format trip section informations then print & store in db
 
     Args:
@@ -105,7 +106,7 @@ def save_trip_section(db_connector, from_city_insee, to_city_insee, best_travel)
                           'DELAY')
 
 
-def run_travel_optimisation(trip_start_date, is_min_co2_search = false, is_force_compute = false):
+def run_travel_optimisation(trip_start_date, is_min_co2_search = False, is_force_compute = False):
     """run the treatment to find the best optimized trip
 
     Args:
@@ -128,7 +129,7 @@ def run_travel_optimisation(trip_start_date, is_min_co2_search = false, is_force
     with db_connector:
         saved_waypoints = db_connector.execute_query(sql.SQL_GET_WAYPOINTS)
 
-        # Dans le précalcul du trajet optimal, utilisation de la date courante
+        # Dans le précalcul des trajets optimaux, utilisation de la date courante
         travel_date = datetime.now().strftime("%Y%m%dT%H%M%S")
         bad_waypoints = []
 
@@ -172,27 +173,28 @@ def run_travel_optimisation(trip_start_date, is_min_co2_search = false, is_force
                                 bad_waypoints.append(int(bad_insee_code))
 
                 # Enregistrement des trajets point à point (préfecture à préfecture)
-                for (waypoint1, waypoint2) in waypoint_co2.keys():
-                    waypoint = [waypoint1,
-                                waypoint2,
-                                str(waypoint_co2[frozenset([waypoint1, waypoint2])]),
-                                str(int(waypoint_durations[frozenset([waypoint1, waypoint2])]))]
-                    db_connector = Connector()
-                    with db_connector:
+                db_connector = Connector()
+                with db_connector:
+                    for (waypoint1, waypoint2) in waypoint_co2.keys():
+                        waypoint = [waypoint1,
+                                    waypoint2,
+                                    str(waypoint_co2[frozenset([waypoint1, waypoint2])]),
+                                    str(int(waypoint_durations[frozenset([waypoint1, waypoint2])]))]
+                    
                         db_connector.execute_nonquery(sql.SQL_INSERT_WAYPOINT, waypoint)
-                        # commit trajets unitaires dans la bdd
-                        db_connector.commit()
+                    # commit trajets unitaires dans la bdd
+                    db_connector.commit()
 
                 # enregistrement des préfectures non trouvée (pas de gare)
                 print(bad_waypoints)
-                for bad_city in bad_waypoints:
-                    db_connector.execute_nonquery(
-                        sql.SQL_INSERT_CITY_WITHOUT_STATION, str(bad_city))
-                db_connector.commit()
+                db_connector = Connector()
+                with db_connector:
+                    for bad_city in bad_waypoints:
+                        db_connector.execute_nonquery(
+                            sql.SQL_INSERT_CITY_WITHOUT_STATION, str(bad_city))
+                #db_connector.commit()
             except Exception as e:
-                db_connector.rollback()
                 print('Erreur durant la génération des trajets de préfecture en préfecture. Rollback effectué')
-                exit()
 
     waypoint_co2 = {}
     waypoint_durations = {}
@@ -207,7 +209,7 @@ def run_travel_optimisation(trip_start_date, is_min_co2_search = false, is_force
             waypoint_durations[frozenset([int(row[0]), int(row[1])])] = row[3]
             processed_waypoints.update([row[0], row[1]])
 
-    travel_results = algorithms.run_genetic_algorithm(waypoints = list(processed_waypoints), is_min_co2_search, generations=300, population_size=100 )
+    travel_results = algorithms.run_genetic_algorithm(waypoints = list(processed_waypoints), is_min_co2_search = is_min_co2_search, generations=300, population_size=100 )
 
     # take most represented trip order
     journey_groups = Counter(chain(*travel_results))
@@ -241,11 +243,11 @@ def run_travel_optimisation(trip_start_date, is_min_co2_search = false, is_force
                     for travel in travels["journeys"]:
                         if is_min_co2_search and float(best_travel['co2_emission']['value']) > float(travel['co2_emission']['value']):
                             best_travel = travel
-                        elif best_travel['arrival_date_time'] > travel['arrival_date_time']:
+                        if best_travel['arrival_date_time'] > travel['arrival_date_time']:
                             best_travel = travel
 
                     # sauvegarde du trajet 'i' en base
-                    save_trip_section(db_connector, from_city_insee, to_city_insee, best_travel)
+                    save_trip_section(db_connector, all_waypoints, from_city_insee, to_city_insee, best_travel)
 
                     # le prochain trajet devra avoir une date de départ > à la date de ce trajet
                     travel_date = best_travel['arrival_date_time']
@@ -273,5 +275,9 @@ def run_travel_optimisation(trip_start_date, is_min_co2_search = false, is_force
             db_connector.rollback()
             print('Erreur durant la création du voyage. rollback effectué!!!')
 
+    print('print map with road-trip data')
+    visualization.generate_visualization()
 
     print('Travel complete. Have  nive trip!!!')
+
+

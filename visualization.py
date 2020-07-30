@@ -72,5 +72,3 @@ def generate_visualization():
 
     fig.savefig(MAP_FILE_PATH)
 
-
-generate_visualization()

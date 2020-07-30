@@ -5,11 +5,11 @@ from visualization import MAP_FILE_PATH
 from DatabaseAccess.Connector import Connector
 import DatabaseAccess.sql_requests as sql
 import bdd_management
+import roadtrip_compute
 
 DIRNAME = os.path.dirname(sys.argv[0])
 
 app = Bottle()
-debug(True)
 
 
 @app.route('/static/<filename:re:.*\.css>')
@@ -59,7 +59,7 @@ def initialize_data():
         if(operation == 'init_prefecture'):
             bdd_management.load_prefecture()
         if(operation == 'init_trip'):
-            bdd_management.initialize_schema()
+            roadtrip_compute.run_travel_optimisation('20200730T152506', False, True)
 
     return template("init")
 

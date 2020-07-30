@@ -34,8 +34,7 @@ SQL_CREATE_TABLE_JOURNEY = """
                                                   
 SQL_CREATE_TABLE_SUBSTITUTE = """
                             CREATE TABLE substitute (insee_code_original TEXT, 
-                                                  insee_code_substitute TEXT,
-                                                  distance INTEGER)
+                                                  insee_code_substitute TEXT)
                             """
                             
 SQL_CREATE_TABLE_FRENCH_TRIP = """
@@ -103,7 +102,10 @@ SQL_GET_WAYPOINTS = """
                     """
 
 SQL_GET_ALL_PREFECTURE = """
-                            SELECT insee_code, postal_code, city, geo_lat || ';' || geo_long as geo_point
+                            SELECT case when exists (select 1 from substitute where insee_code = insee_code_original) then (select insee_code_substitute from substitute where insee_code = insee_code_original) else insee_code end as insee_code ,
+                                    postal_code, 
+                                    city, 
+                                    geo_lat || ';' || geo_long as geo_point
                             FROM prefecture
                         """
 
