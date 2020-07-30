@@ -20,6 +20,7 @@
             <div class="row">
                 % include('nav.tpl', title='Navigation')
                 <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+                    <h2>Consulter le voyage</h2>
                     <div
                         class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                         <div id="demo" class="collapse">
@@ -64,8 +65,8 @@
                             % if trip[1] == 'SECTION':
                             <li><b>({{i}}) - {{trip[0]}}</b></li>
                             % i = i+1
-                            % else if trip[1] == 'INFO':
-                            <li>{{trip[0]}}</li>
+                            % elif trip[1] == 'INFO':
+                            <li><b><span style="color: red">{{trip[0]}}</span></b></li>
                             % else:
                             <li style="margin-left:50px;">{{trip[0]}}</li>
                             %end

@@ -260,10 +260,11 @@ def run_travel_optimisation(trip_start_date, is_min_co2_search = False, is_force
             resume = db_connector.execute_query(sql.SQL_GET_C02_CONSUMPTION_RESUME)
             resume = resume.fetchone()
 
-            resume_description = """Début du voyage le {} . Arrivée le {}. 
-                                Le voyage à durée {} pour un total de {:d} kgeC""".format(
+            resume_description = """Début du voyage le {} . Arrivée le {}. ({} jours)
+                                La durée dans les transports et le temps d'attente entre les transferts est de {} pour un total de {:d} kgeC""".format(
                                                                         datetime_str_to_datetime_str(trip_start_date),
                                                                         datetime_str_to_datetime_str(travel_date),
+                                                                        str(abs((datetime.strptime(trip_start_date, "%Y%m%dT%H%M%S") - datetime.strptime(travel_date, "%Y%m%dT%H%M%S")).days)),
                                                                         str(timedelta(seconds=resume[0])) ,
                                                                         trunc( resume[1]/1000))
 

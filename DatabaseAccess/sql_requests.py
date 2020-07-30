@@ -27,8 +27,8 @@ SQL_CREATE_TABLE_JOURNEY = """
                                                   insee_code_to TEXT, 
                                                   co2 FLOAT, 
                                                   duration INTEGER,
-                                                  FOREIGN KEY (insee_code_from) REFERENCES prefecture (insee_code),
-												  FOREIGN KEY (insee_code_to) REFERENCES prefecture (insee_code))
+                                                  FOREIGN KEY (insee_code_from) REFERENCES prefecture (insee_code) ON DELETE CASCADE,
+												  FOREIGN KEY (insee_code_to) REFERENCES prefecture (insee_code)) ON DELETE CASCADE
                             """
 
                                                   

@@ -9,95 +9,90 @@
     % include('top_nav.tpl', title='Top navigation')
 
     <div class="container-fluid">
-        <form action="/manage" method="get">
+        <form action="/initialize" method="get">
             <div class="row">
                 % include('nav.tpl', title='Navigation')
                 <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
-                    <div
-                        class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h2>Gestion des tables</h2>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm" style="table-layout: fixed; width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width:600px">Fonctionnalité</th>
+                                    <th style="width:30px"></th>
+                                    <th style="width:100%"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <span><b>Vider la table 'prefecture'</b></span>
+                                        <br>
+                                        <span><i>La table 'prefecture' contient le référentiel des préfectures.
+                                                Vider cette table entrainera le vidage des tables 'journey' et
+                                                'road_trip'</i></span>
+                                    </td>
+                                    <td></td>
+                                    <td>
+                                        <button type="submit" name="operation" value="trunc_prefecture"
+                                            style="background:transparent; border: none; color: blue" title="supprimer">
+                                            Supprimer
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span><b>Vider la table 'journey'</b></span>
+                                        <br>
+                                        <span><i>La table 'journey' contient la simulation des chemins "préfecture
+                                                vers préfecture" obtenu par l'API . Une fois la table vidée, il sera
+                                                nécessaire de la re-remplir en faisant appel à l'API SNCF
+                                                (traitement TRES long)</i></span>
+                                    </td>
+                                    <td></td>
+                                    <td>
+                                        <button type="submit" name="operation" value="trunc_journey"
+                                            style="background:transparent; border: none; color: blue" title="supprimer">
+                                            Supprimer
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span><b>Vider la table 'trip_road'</b></span>
+                                        <br>
+                                        <span><i>La table 'journey' contient la simulation des chemins "préfecture
+                                                vers préfecture" obtenu par l'API . Une fois la table vidée, il sera
+                                                nécessaire de la re-remplir en faisant appel à l'API SNCF
+                                                (traitement TRES long)</i></span>
+                                    </td>
+                                    <td></td>
+                                    <td>
+                                        <button type="submit" name="operation" value="trunc_roadtrip"
+                                            style="background:transparent; border: none; color: blue" title="supprimer">
+                                            Supprimer
+                                        </button>
+                                    </td>
+                                </tr>
 
-                        <div class="table-responsive">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th style="width:500px">Fonctionnalité</th>
-                                        <th style="width:30px"></th>
-                                        <th style="width:100%"></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>
-                                            <span><b>Vider la table 'prefecture'</b></span>
-                                            <br>
-                                            <span><i>La table 'prefecture' contient le référentiel des préfectures.
-                                                    Vider cette table entrainera le vidage des tables 'journey' et
-                                                    'road_trip'</i></span>
-                                        </td>
-                                        <td></td>
-                                        <td>
-                                            <button type="submit" name="operation" value="trunc_prefecture"
-                                                style="background:transparent; border: none; color: blue"
-                                                title="supprimer">
-                                                Supprimer
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <span><b>Vider la table 'journey'</b></span>
-                                            <br>
-                                            <span><i>La table 'journey' contient la simulation des chemins "préfecture
-                                                    vers préfecture" obtenu par l'API . Une fois la table vidée, il sera
-                                                    nécessaire de la re-remplir en faisant appel à l'API SNCF
-                                                    (traitement TRES long)</i></span>
-                                        </td>
-                                        <td></td>
-                                        <td>
-                                            <button type="submit" name="operation" value="trunc_journey"
-                                                style="background:transparent; border: none; color: blue"
-                                                title="supprimer">
-                                                Supprimer
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <span><b>Vider la table 'trip_road'</b></span>
-                                            <br>
-                                            <span><i>La table 'journey' contient la simulation des chemins "préfecture
-                                                    vers préfecture" obtenu par l'API . Une fois la table vidée, il sera
-                                                    nécessaire de la re-remplir en faisant appel à l'API SNCF
-                                                    (traitement TRES long)</i></span>
-                                        </td>
-                                        <td></td>
-                                        <td>
-                                            <button type="submit" name="operation" value="trunc_roadtrip"
-                                                style="background:transparent; border: none; color: blue"
-                                                title="supprimer">
-                                                Supprimer
-                                            </button>
-                                        </td>
-                                    </tr>
-
-                                    <tr>
-                                        <td>
-                                            <span><b>Initialiser le schéma postgres</b></span>
-                                            <br>
-                                            <span><i>Crée les tables utilisées par l'application. Cette fonction ne
-                                                    supprime pas les tables et données existantes</i></span>
-                                        </td>
-                                        <td></td>
-                                        <td>
-                                            <button type="submit" name="operation" value="init_schema"
-                                                style="background:transparent; border: none; color: blue">
-                                                initialiser
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                                <tr>
+                                    <td>
+                                        <span><b>Initialiser le schéma postgres</b></span>
+                                        <br>
+                                        <span><i>Crée les tables utilisées par l'application. Cette fonction ne
+                                                supprime pas les tables et données existantes</i></span>
+                                    </td>
+                                    <td></td>
+                                    <td>
+                                        <button type="submit" name="operation" value="init_schema"
+                                            style="background:transparent; border: none; color: blue">
+                                            initialiser
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </main>
             </div>
         </form>

@@ -1,6 +1,7 @@
 import os
 import sys
 from bottle import Bottle, run, request, template, debug, static_file
+from datetime import datetime
 from visualization import MAP_FILE_PATH
 from DatabaseAccess.Connector import Connector
 import DatabaseAccess.sql_requests as sql
@@ -59,7 +60,13 @@ def initialize_data():
         if(operation == 'init_prefecture'):
             bdd_management.load_prefecture()
         if(operation == 'init_trip'):
-            roadtrip_compute.run_travel_optimisation('20200730T152506', False, True)
+            start_date = request.query.start_date
+            start_date = datetime.strptime(start_date, "%d/%m/%Y").strftime("%Y%m%dT%H%M%S")
+
+            force_refresh = request.query.force == 'on'
+            is_co2_search = request.query.type == 'co2'
+
+            roadtrip_compute.run_travel_optimisation(start_date, is_co2_search, force_refresh)
 
     return template("init")
 
@@ -75,8 +82,6 @@ def bdd_operation():
             bdd_management.truncate_prefecture()
         if(bdd_operation == 'trunc_roadtrip'):
             bdd_management.truncate_roadtrip()
-        if(bdd_operation == 'init_prefecture'):
-            bdd_management.load_prefecture()
         if(bdd_operation == 'init_schema'):
             bdd_management.initialize_schema()
 
